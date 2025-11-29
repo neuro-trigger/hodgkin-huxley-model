@@ -27,31 +27,83 @@ HH_PARAMETERS = {
     'C' : 1         # Membrane capacitancy (pico F/cm^2)
 }
 
-def membrane_potential_differential(s, p, i):
-   na_current = p['g_Na']*(s[1]**3)*s[3]*(s[0] - p['E_Na'])
-   k_current = p['g_K']*(s[2]**4)*(s[0] - p['E_K'])
-   l_current = p['g_L']*(s[0] - p['E_L'])
+"""
+Differential functions.
+"""
+def membrane_potential_differential(u, m, n, h, p, i):
+   na_current = p['g_Na']*(m**3)*h*(u - p['E_Na'])
+   k_current = p['g_K']*(n**4)*(u - p['E_K'])
+   l_current = p['g_L']*(u - p['E_L'])
 
    return ( i - (na_current + k_current + l_current) ) / p['C']
 
-def gate_m_differential(s):
-    alpha = ( 0.182 * (s[0] + 35) ) / ( 1 - np.exp( -(s[0] + 35)/9 ) )
-    beta = ( -0.124 * (s[0] + 35) ) / ( 1 - np.exp( (s[0] + 35)/9 ) )
+def gate_m_differential(u, m):
+    alpha = ( 0.182 * (u + 35) ) / ( 1 - np.exp( -(u + 35)/9 ) )
+    beta = ( -0.124 * (u + 35) ) / ( 1 - np.exp( (u + 35)/9 ) )
 
-    return alpha*(1 - s[1]) - beta*s[1]
+    return alpha*(1 - m) - beta*m
 
-def gate_n_differential(s):
-    alpha = ( 0.02 * (s[0] - 25) ) / ( 1 - np.exp( -(s[0] - 25)/9 ) )
-    beta = ( -0.002 * (s[0] - 25) ) / ( 1 - np.exp( (s[0] - 25)/9 ) )
+def gate_n_differential(u, n):
+    alpha = ( 0.02 * (u - 25) ) / ( 1 - np.exp( -(u - 25)/9 ) )
+    beta = ( -0.002 * (u - 25) ) / ( 1 - np.exp( (u - 25)/9 ) )
 
-    return alpha*(1 - s[2]) - beta*s[2]
+    return alpha*(1 - n) - beta*n
 
-def gate_h_differential(s):
-    alpha = 0.25 * np.exp( -(s[0] + 90)/12 )
-    beta = 0.25 * np.exp( (s[0] + 62)/6 ) / np.exp( (s[0] + 90)/12 )
+def gate_h_differential(u, h):
+    alpha = 0.25 * np.exp( -(u + 90)/12 )
+    beta = 0.25 * np.exp( (u + 62)/6 ) / np.exp( (u + 90)/12 )
 
-    return alpha*(1 - s[3]) - beta*s[3]
+    return alpha*(1 - h) - beta*h
 
+"""
+RK4 function.
+"""
+def rk4_step_(u, m, n, h, input_current, t, dt):
+    i = input_current(t)
+    uk1 = membrane_potential_differential(u, m, n, h, i)
+    mk1 = gate_m_differential(u, m)
+    nk1 = gate_n_differential(u, n)
+    hk1 = gate_h_differential(u, h)
+
+    i = input_current(t + dt/2)
+    uk2 = membrane_potential_differential(u + uk1*dt/2,
+                                          m + mk1*dt/2,
+                                          n + nk1*dt/2,
+                                          h + hk1*dt/2,
+                                          i)
+    mk2 = gate_m_differential(u + uk1*dt/2, m + mk1*dt/2)
+    nk2 = gate_n_differential(u + uk1*dt/2, n + nk1*dt/2)
+    hk2 = gate_h_differential(u + uk1*dt/2, h + hk1*dt/2)
+
+    uk3 = membrane_potential_differential(u + uk2*dt/2,
+                                          m + mk2*dt/2,
+                                          n + nk2*dt/2,
+                                          h + hk2*dt/2,
+                                          i)
+    mk3 = gate_m_differential(u + uk2*dt/2, m + mk2*dt/2)
+    nk3 = gate_n_differential(u + uk2*dt/2, n + nk2*dt/2)
+    hk3 = gate_h_differential(u + uk2*dt/2, h + hk2*dt/2)
+
+    i = input_current(t + dt)
+    uk4 = membrane_potential_differential(u + uk3*dt,
+                                          m + mk3*dt,
+                                          n + nk3*dt,
+                                          h + hk3*dt,
+                                          i)
+    mk4 = gate_m_differential(u + uk3*dt, m + mk3*dt)
+    nk4 = gate_n_differential(u + uk3*dt, n + nk3*dt)
+    hk4 = gate_h_differential(u + uk3*dt, h + hk3*dt)
+
+    f_u = u + dt/6 * (uk1 + 2*uk2 + 2*uk3 + uk4)
+    f_m = m + dt/6 * (mk1 + 2*mk2 + 2*mk3 + mk4)
+    f_n = n + dt/6 * (nk1 + 2*nk2 + 2*nk3 + nk4)
+    f_h = h + dt/6 * (hk1 + 2*hk2 + 2*hk3 + hk4)
+
+    return f_u, f_m, f_n, f_h
+
+"""
+Plot functions.
+"""
 def plot_gate_variables(m, n, h, t):
     plot.figure(figsize=(8, 5))
 
@@ -66,8 +118,5 @@ def plot_gate_variables(m, n, h, t):
     plot.grid(True)
 
     plot.show()
-
-
-
 
 
