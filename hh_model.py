@@ -58,9 +58,9 @@ def gate_h_differential(u, h):
 """
 RK4 function.
 """
-def rk4_step_(u, m, n, h, input_current, t, dt):
+def rk4_step_(u, m, n, h, p, input_current, t, dt):
     i = input_current(t)
-    uk1 = membrane_potential_differential(u, m, n, h, i)
+    uk1 = membrane_potential_differential(u, m, n, h, p, i)
     mk1 = gate_m_differential(u, m)
     nk1 = gate_n_differential(u, n)
     hk1 = gate_h_differential(u, h)
@@ -70,6 +70,7 @@ def rk4_step_(u, m, n, h, input_current, t, dt):
                                           m + mk1*dt/2,
                                           n + nk1*dt/2,
                                           h + hk1*dt/2,
+                                          p,
                                           i)
     mk2 = gate_m_differential(u + uk1*dt/2, m + mk1*dt/2)
     nk2 = gate_n_differential(u + uk1*dt/2, n + nk1*dt/2)
@@ -79,6 +80,7 @@ def rk4_step_(u, m, n, h, input_current, t, dt):
                                           m + mk2*dt/2,
                                           n + nk2*dt/2,
                                           h + hk2*dt/2,
+                                          p,
                                           i)
     mk3 = gate_m_differential(u + uk2*dt/2, m + mk2*dt/2)
     nk3 = gate_n_differential(u + uk2*dt/2, n + nk2*dt/2)
@@ -89,6 +91,7 @@ def rk4_step_(u, m, n, h, input_current, t, dt):
                                           m + mk3*dt,
                                           n + nk3*dt,
                                           h + hk3*dt,
+                                          p,
                                           i)
     mk4 = gate_m_differential(u + uk3*dt, m + mk3*dt)
     nk4 = gate_n_differential(u + uk3*dt, n + nk3*dt)
@@ -118,5 +121,10 @@ def plot_gate_variables(m, n, h, t):
     plot.grid(True)
 
     plot.show()
+
+"""
+Simulation function.
+"""
+def simulate_model(p, input_current, final_t, dt):
 
 
