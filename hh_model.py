@@ -27,6 +27,12 @@ HH_PARAMETERS = {
     'C' : 1         # Membrane capacitancy (pico F/cm^2)
 }
 
+def vtrap(x, y):
+    if abs(x/y) < 1e-6:
+        return y * (1 + x/y/2) 
+    else:
+        return x / (1 - np.exp(-x/y))
+
 """
 Differential functions.
 """
@@ -38,14 +44,14 @@ def membrane_potential_differential(u, m, n, h, p, i):
    return ( i - (na_current + k_current + l_current) ) / p['C']
 
 def gate_m_differential(u, m):
-    alpha = ( 0.182 * (u + 35) ) / ( 1 - np.exp( -(u + 35)/9 ) )
-    beta = ( -0.124 * (u + 35) ) / ( 1 - np.exp( (u + 35)/9 ) )
+    alpha = 0.182 * vtrap(u + 35, 9)
+    beta = 0.124 * vtrap(-(u + 35), 9)
 
     return alpha*(1 - m) - beta*m
 
 def gate_n_differential(u, n):
-    alpha = ( 0.02 * (u - 25) ) / ( 1 - np.exp( -(u - 25)/9 ) )
-    beta = ( -0.002 * (u - 25) ) / ( 1 - np.exp( (u - 25)/9 ) )
+    alpha = 0.02 * vtrap(u - 25, 9)
+    beta = 0.002 * vtrap(-(u - 25), 9)
 
     return alpha*(1 - n) - beta*n
 
@@ -58,7 +64,7 @@ def gate_h_differential(u, h):
 """
 RK4 function.
 """
-def rk4_step_(u, m, n, h, p, input_current, t, dt):
+def rk4_step(u, m, n, h, p, input_current, t, dt):
     i = input_current(t)
     uk1 = membrane_potential_differential(u, m, n, h, p, i)
     mk1 = gate_m_differential(u, m)
@@ -107,24 +113,63 @@ def rk4_step_(u, m, n, h, p, input_current, t, dt):
 """
 Plot functions.
 """
-def plot_gate_variables(m, n, h, t):
-    plot.figure(figsize=(8, 5))
+def plot_results(t, u, m, n, h, i):
+    fig, (ax1, ax2, ax3) = plot.subplots(3, 1, sharex=True, figsize=(8, 8))
+    
+    # Membrane potential plot (u)
+    ax1.plot(t, u, 'b', linewidth=2)
+    ax1.set_ylabel('V [mV]')
+    ax1.set_title('HH Neuron, step current')
+    ax1.grid(True)
 
-    plot.plot(t, n, label='n(t)')
-    plot.plot(t, m, label='m(t)')
-    plot.plot(t, h, label='h(t)')
+    ax1.set_ylim(-20, 120) 
 
-    plot.xlabel('Time (ms)')
-    plot.ylabel('Gate Value')
-    plot.title('Gate Variable Evolution')
-    plot.legend()
-    plot.grid(True)
+    # 2. Gate variables plot (m, n, h)
+    ax2.plot(t, m, 'k', label='m', linewidth=1.5)
+    ax2.plot(t, n, 'b', label='n', linewidth=1.5)
+    ax2.plot(t, h, 'r', label='h', linewidth=1.5)
+    ax2.set_ylabel('act./inact.')
+    ax2.legend(loc='right')
+    ax2.grid(True)
+    ax2.set_ylim(0, 1.1)
 
+    # 3. Input current plot (i)
+    ax3.plot(t, i, 'b', linewidth=2)
+    ax3.set_ylabel('I [micro A]')
+    ax3.set_xlabel('t [ms]')
+    ax3.grid(True)
+
+    ax3.set_ylim(-0.5, max(i)*1.1 if max(i) > 0 else 1)
+
+    plot.tight_layout()
     plot.show()
 
 """
 Simulation function.
 """
-def simulate_model(p, input_current, final_t, dt):
+def simulate_model(u0, m0, n0, h0, p, input_current, final_t, dt):
+    t = [0]
+    u = [u0]
+    m = [m0]
+    n = [n0]
+    h = [h0]
+    i = [input_current(0)]
 
+    while t[-1] < final_t:
+        nu, nm, nn, nh = rk4_step(u[-1], m[-1], n[-1], h[-1], p, input_current,
+                                  t[-1], dt)
+        t.append(t[-1] + dt)
+        u.append(nu)
+        m.append(nm)
+        n.append(nn)
+        h.append(nh)
+        i.append(input_current(t[-1]))
 
+    return (
+            np.array(t),
+            np.array(u),
+            np.array(m),
+            np.array(n),
+            np.array(h),
+            np.array(i)
+            )
