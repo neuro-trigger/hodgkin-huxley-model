@@ -36,8 +36,6 @@ $$\frac{dx}{dt} = \alpha_x(V)(1-x) - \beta_x(V)x, \quad x \in \{m, n, h\}$$
 ### 1. Action Potential Generation
 The simulation successfully reproduces the characteristic spike shape, including the depolarization phase, repolarization, and hyperpolarization overshoot.
 
-*(Place an image of a single spike here, e.g., `![Single Spike](images/spike.png)`) - Optional*
-
 ### 2. Frequency vs. Current
 Increasing the injected current results in a higher firing frequency, consistent with the linear frequency-current relationship observed in Type I neurons, until a depolarization block occurs at high currents.
 
