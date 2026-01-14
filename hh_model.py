@@ -122,7 +122,7 @@ def plot_results(t, u, m, n, h, i):
     ax1.set_title('HH Neuron, step current')
     ax1.grid(True)
 
-    ax1.set_ylim(-20, 120) 
+    ax1.set_ylim(-75, 50) 
 
     # 2. Gate variables plot (m, n, h)
     ax2.plot(t, m, 'k', label='m', linewidth=1.5)
@@ -173,3 +173,25 @@ def simulate_model(u0, m0, n0, h0, p, input_current, final_t, dt):
             np.array(h),
             np.array(i)
             )
+
+if __name__ == "__main__":
+
+    def step_current(t):
+        if 1.0 <= t <= 120.0:
+            return 1.4
+        else:
+            return 0.0
+
+    u0 = -65  
+    m0 = 0.05
+    n0 = 0.0
+    h0 = 0.65
+
+    final_t = 140
+    dt = 0.001
+
+    print("Simulando...")
+    t, u, m, n, h, i = simulate_model(u0, m0, n0, h0, HH_PARAMETERS, step_current, final_t, dt)
+    print("Graficando resultados...")
+    plot_results(t, u, m, n, h, i)
+
